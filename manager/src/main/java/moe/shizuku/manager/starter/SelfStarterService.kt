@@ -7,9 +7,6 @@ import android.os.IBinder
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import kotlinx.coroutines.Dispatchers
@@ -25,12 +22,11 @@ import moe.shizuku.manager.adb.PreferenceAdbKeyStore
 import moe.shizuku.manager.utils.EnvironmentUtils
 import rikka.lifecycle.Resource
 
-class SelfStarterService : Service(), LifecycleOwner {
+class SelfStarterService : Service() {
 
     private val sb = StringBuilder()
     private lateinit var adbMdns: AdbMdns
     private val port = MutableLiveData<Int>()
-    private val lifecycleOwner = LifecycleRegistry(this)
     private val _output = MutableLiveData<Resource<StringBuilder>>()
     val output = _output as LiveData<Resource<StringBuilder>>
 
@@ -71,11 +67,6 @@ class SelfStarterService : Service(), LifecycleOwner {
 
     override fun onBind(intent: Intent?): IBinder? {
         return null
-    }
-
-
-    override fun getLifecycle(): Lifecycle {
-        return lifecycleOwner
     }
 
     private fun postResult(throwable: Throwable? = null) {
