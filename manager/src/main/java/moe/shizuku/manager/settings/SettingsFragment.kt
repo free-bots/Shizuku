@@ -1,10 +1,9 @@
 package moe.shizuku.manager.settings
 
 import android.Manifest
-import android.content.pm.PackageManager
-import android.widget.Toast
 import android.content.ComponentName
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.text.TextUtils
@@ -13,9 +12,14 @@ import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
-import androidx.preference.*
+import androidx.preference.ListPreference
+import androidx.preference.Preference
+import androidx.preference.PreferenceCategory
+import androidx.preference.PreferenceFragmentCompat
+import androidx.preference.TwoStatePreference
 import androidx.recyclerview.widget.RecyclerView
 import moe.shizuku.manager.R
 import moe.shizuku.manager.ShizukuSettings
@@ -29,13 +33,15 @@ import moe.shizuku.manager.ktx.setComponentEnabled
 import moe.shizuku.manager.ktx.toHtml
 import moe.shizuku.manager.receiver.BootCompleteReceiver
 import moe.shizuku.manager.utils.CustomTabsHelper
+import moe.shizuku.server.IShizukuService
 import rikka.core.util.ResourceUtils
 import rikka.material.app.LocaleDelegate
 import rikka.recyclerview.addEdgeSpacing
 import rikka.recyclerview.fixEdgeEffect
+import rikka.shizuku.Shizuku
 import rikka.shizuku.manager.ShizukuLocales
 import rikka.widget.borderview.BorderRecyclerView
-import java.util.*
+import java.util.Locale
 import moe.shizuku.manager.ShizukuSettings.LANGUAGE as KEY_LANGUAGE
 import moe.shizuku.manager.ShizukuSettings.NIGHT_MODE as KEY_NIGHT_MODE
 
@@ -84,6 +90,16 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 Preference.OnPreferenceChangeListener{ _: Preference?, newValue: Any ->
                     if (newValue is Boolean) {
                         if (ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_SECURE_SETTINGS) != PackageManager.PERMISSION_GRANTED) {
+                            val success = IShizukuService.Stub.asInterface(Shizuku.getBinder())
+                                .newProcess(arrayOf("sh","-c", "pm grant moe.shizuku.privileged.api android.permission.WRITE_SECURE_SETTINGS"), null, null)
+                                .waitFor()
+                            if (success == 0) {
+                                Log.i(ShizukuSettings.NAME, "Start on Boot Wireless without granting WRITE_SECURE_SETTINGS permission try to grant permission")
+                                Toast.makeText(context, "Granted WRITE_SECURE_SETTINGS permission for Shizuku", Toast.LENGTH_SHORT).show()
+                                startOnBootPreference.isChecked = false
+                                context.packageManager.setComponentEnabled(componentName, newValue)
+                                return@OnPreferenceChangeListener context.packageManager.isComponentEnabled(componentName) == newValue
+                            }
                             Log.i(ShizukuSettings.NAME, "Start on Boot Wireless without granting WRITE_SECURE_SETTINGS permission")
                             Toast.makeText(context, "WRITE_SECURE_SETTINGS permission is not granted for Shizuku", Toast.LENGTH_SHORT).show()
                             startOnBootWirelessPreference.isChecked = false
